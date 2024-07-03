@@ -27,7 +27,6 @@ client = OpenAI()
 def contem_numero(s):
     return bool(re.search(r'\d', s))
 
-
 def generate_prompt(infos):
     prompt = f"""
     Você é um assistente de inteligência artificial e vai criar um plano alimentar personalizado para um usuário com base nas informações abaixo:
@@ -83,7 +82,6 @@ def generate_prompt(infos):
     """
     return prompt
 
-
 def generate_meal_plan(infos):
     prompt = generate_prompt(infos)
     completion = client.chat.completions.create(
@@ -99,7 +97,6 @@ def generate_meal_plan(infos):
     usage_tokens = completion.usage.completion_tokens
     prompt_tokens = completion.usage.prompt_tokens
     return meal_plan, usage_tokens, prompt_tokens
-
 
 def extract_daily_needs(text):
     pattern = re.compile(
@@ -121,7 +118,6 @@ def extract_daily_needs(text):
         }
     return None
 
-
 def extract_meal_details(text):
     # Padrão para capturar todas as refeições e seus detalhes
     meal_pattern = re.compile(
@@ -137,7 +133,6 @@ def extract_meal_details(text):
 
     return meals
 
-
 def init_db():
     with app.app_context():
         db.create_all()
@@ -152,7 +147,6 @@ class User(db.Model):
     form_completed = db.Column(db.Boolean, default=False, nullable=False)
     meal_plans = db.relationship('MealPlan', backref='user', lazy=True)
     daily_needs = db.relationship('DailyNeeds', backref='user', uselist=False)
-
 
 class UserInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -176,7 +170,6 @@ class UserInfo(db.Model):
     suplementos = db.Column(db.String(255))
     uso_suplementos = db.Column(db.String(255))
 
-
 class DailyNeeds(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -185,7 +178,6 @@ class DailyNeeds(db.Model):
     carboidratos = db.Column(db.Integer, nullable=False)
     gorduras = db.Column(db.Integer, nullable=False)
     refeicoes = db.Column(db.Integer, nullable=False)
-
 
 class MealPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -238,58 +230,62 @@ def submit_form():
     if not user:
         return jsonify({'message': 'Usuário não encontrado'}), 404
 
-    user_info = UserInfo(
-        user_id=user.id,
-        peso=data.get('peso'),
-        altura=data.get('altura'),
-        idade=data.get('idade'),
-        sexo=data.get('sexo'),
-        exercicios=data.get('exercicios'),
-        frequencia_exercicios=data.get('frequencia_exercicios'),
-        duracao_exercicios=data.get('duracao_exercicios'),
-        biotipo=data.get('biotipo'),
-        meta=data.get('meta'),
-        condicoes=data.get('condicoes'),
-        dieta=data.get('dieta'),
-        frequencia_legumes=data.get('frequencia_legumes'),
-        frequencia_frutas=data.get('frequencia_frutas'),
-        frequencia_verduras=data.get('frequencia_verduras'),
-        frequencia_carnes=data.get('frequencia_carnes'),
-        alimentos_excluidos=data.get('alimentos_excluidos'),
-        suplementos=data.get('suplementos'),
-        uso_suplementos=data.get('uso_suplementos'),
-    )
+    try:
 
-    print(user_info)
-    db.session.add(user_info)
-    user.form_completed = True
-
-    meal_plan_text, usage_tokens, prompt_tokens = generate_meal_plan(data)
-    daily_needs_data = extract_daily_needs(meal_plan_text)
-    meal_details = extract_meal_details(meal_plan_text)
-
-    if daily_needs_data:
-        daily_needs = DailyNeeds(
+        user_info = UserInfo(
             user_id=user.id,
-            calorias=daily_needs_data['calorias'],
-            proteinas=daily_needs_data['proteinas'],
-            carboidratos=daily_needs_data['carboidratos'],
-            gorduras=daily_needs_data['gorduras'],
-            refeicoes=daily_needs_data['refeicoes']
+            peso=data.get('peso'),
+            altura=data.get('altura'),
+            idade=data.get('idade'),
+            sexo=data.get('sexo'),
+            exercicios=data.get('exercicios'),
+            frequencia_exercicios=data.get('frequencia_exercicios'),
+            duracao_exercicios=data.get('duracao_exercicios'),
+            biotipo=data.get('biotipo'),
+            meta=data.get('meta'),
+            condicoes=data.get('condicoes'),
+            dieta=data.get('dieta'),
+            frequencia_legumes=data.get('frequencia_legumes'),
+            frequencia_frutas=data.get('frequencia_frutas'),
+            frequencia_verduras=data.get('frequencia_verduras'),
+            frequencia_carnes=data.get('frequencia_carnes'),
+            alimentos_excluidos=data.get('alimentos_excluidos'),
+            suplementos=data.get('suplementos'),
+            uso_suplementos=data.get('uso_suplementos'),
         )
-        db.session.add(daily_needs)
 
-    meal_plan = MealPlan(
-        user_id=user.id,
-        meal_plan=json.dumps(meal_details, ensure_ascii=False),
-    )
+        print(user_info)
+        db.session.add(user_info)
+        user.form_completed = True
 
-    db.session.add(meal_plan)
+        meal_plan_text, usage_tokens, prompt_tokens = generate_meal_plan(data)
+        daily_needs_data = extract_daily_needs(meal_plan_text)
+        meal_details = extract_meal_details(meal_plan_text)
 
-    db.session.commit()
+        if daily_needs_data:
+            daily_needs = DailyNeeds(
+                user_id=user.id,
+                calorias=daily_needs_data['calorias'],
+                proteinas=daily_needs_data['proteinas'],
+                carboidratos=daily_needs_data['carboidratos'],
+                gorduras=daily_needs_data['gorduras'],
+                refeicoes=daily_needs_data['refeicoes']
+            )
+            db.session.add(daily_needs)
 
-    return jsonify({'message': 'Formulário enviado com sucesso'}), 201
+        meal_plan = MealPlan(
+            user_id=user.id,
+            meal_plan=json.dumps(meal_details, ensure_ascii=False),
+        )
 
+        db.session.add(meal_plan)
+
+        db.session.commit()
+
+        return jsonify({'message': 'Formulário enviado com sucesso'}), 201
+    
+    except:
+        return jsonify({'message': 'Erro ao enviar formulário'}), 500
 
 @app.route('/user_info', methods=['GET'])
 @jwt_required()

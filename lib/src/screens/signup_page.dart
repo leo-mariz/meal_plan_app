@@ -42,24 +42,20 @@ class SignUpPageState extends State<SignUpPage> {
     if (response.statusCode == 201) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt', data['token']);
-      // ignore: use_build_context_synchronously
+
       showDialog(
         // ignore: use_build_context_synchronously
         context: context,
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Bem-vindo!'),
-            content: const Text(
-                'Que bom ter você conosco. Precisamos de algumas informações...'),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('Próximo'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushNamed(context, '/forms');
-                },
-              ),
-            ],
+          return CustomMessageDialog(
+            title: '🎉 Bem-vindo!',
+            message:
+                'Que bom ter você conosco! Precisamos de algumas informações para continuar...',
+            buttonText: 'Preencher Informações',
+            onButtonPressed: () {
+              Navigator.of(context).pop();
+              Navigator.pushNamed(context, '/forms');
+            },
           );
         },
       );

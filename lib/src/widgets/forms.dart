@@ -99,8 +99,8 @@ class MultipleChoiceFormState extends State<MultipleChoiceForm> {
                         widget.controllers[i],
                         widget.labels.keys.elementAt(i),
                         widget.labels.values.elementAt(i)[0] as String,
-                        List<String>.from(
-                            widget.labels.values.elementAt(i)[1] as List<dynamic>),
+                        List<String>.from(widget.labels.values.elementAt(i)[1]
+                            as List<dynamic>),
                       ),
                     ),
                   const SizedBox(height: 15),
@@ -126,23 +126,9 @@ class MultipleChoiceFormState extends State<MultipleChoiceForm> {
   ) {
     switch (componentType) {
       case 'dropdown':
-        return DropdownButtonFormField<String>(
-          decoration: InputDecoration(
-            labelText: label,
-            labelStyle: const TextStyle(color: Colors.black),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.3),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0),
-              borderSide: BorderSide.none,
-            ),
-          ),
-          items: options.map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
+        return CustomDropdownButtonFormField(
+          label: label,
+          options: options,
           onChanged: (newValue) {
             setState(() {
               controller.text = newValue!;
@@ -153,17 +139,23 @@ class MultipleChoiceFormState extends State<MultipleChoiceForm> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontSize: 16)),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700)),
             ...options.map((option) {
               return CheckboxListTile(
-                title: Text(option),
+                title:
+                    Text(option, style: const TextStyle(color: Colors.white)),
                 value: controller.text.contains(option),
                 onChanged: (bool? value) {
                   setState(() {
                     if (value == true) {
                       controller.text += '$option;';
                     } else {
-                      controller.text = controller.text.replaceAll('$option;', '');
+                      controller.text =
+                          controller.text.replaceAll('$option;', '');
                     }
                   });
                 },
@@ -176,10 +168,15 @@ class MultipleChoiceFormState extends State<MultipleChoiceForm> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontSize: 16)),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700)),
             ...options.map((option) {
               return RadioListTile<String>(
-                title: Text(option),
+                title:
+                    Text(option, style: const TextStyle(color: Colors.white)),
                 value: option,
                 groupValue: _radioGroupValues[label],
                 onChanged: (String? value) {
@@ -197,7 +194,8 @@ class MultipleChoiceFormState extends State<MultipleChoiceForm> {
           controller: controller,
           decoration: InputDecoration(
             labelText: label,
-            labelStyle: const TextStyle(color: Colors.black),
+            labelStyle: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700),
             filled: true,
             fillColor: Colors.white.withOpacity(0.3),
             border: OutlineInputBorder(
@@ -210,3 +208,108 @@ class MultipleChoiceFormState extends State<MultipleChoiceForm> {
   }
 }
 
+class CustomDropdownButtonFormField extends StatefulWidget {
+  final List<String> options;
+  final String label;
+  final ValueChanged<String?>? onChanged;
+
+  const CustomDropdownButtonFormField({
+    super.key,
+    required this.options,
+    required this.label,
+    this.onChanged,
+  });
+
+  @override
+  CustomDropdownButtonFormFieldState createState() =>
+      CustomDropdownButtonFormFieldState();
+}
+
+class CustomDropdownButtonFormFieldState
+    extends State<CustomDropdownButtonFormField> {
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _overlayEntry;
+  String? _selectedItem;
+
+  void _toggleDropdown() {
+    if (_overlayEntry == null) {
+      _overlayEntry = _createOverlayEntry();
+      Overlay.of(context).insert(_overlayEntry!);
+    } else {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+  }
+
+  OverlayEntry _createOverlayEntry() {
+    RenderBox renderBox = context.findRenderObject() as RenderBox;
+    Size size = renderBox.size;
+
+    return OverlayEntry(
+      builder: (context) => Positioned(
+        width: size.width,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: Offset(0.0, size.height),
+          child: Material(
+            elevation: 4.0,
+            borderRadius: BorderRadius.circular(8.0),
+            child: ListView(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              children: widget.options
+                  .map(
+                    (option) => ListTile(
+                      title: Text(option,
+                          style: const TextStyle(color: Colors.black)),
+                      onTap: () {
+                        setState(() {
+                          _selectedItem = option;
+                        });
+                        widget.onChanged?.call(option);
+                        _toggleDropdown();
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: GestureDetector(
+        onTap: _toggleDropdown,
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: widget.label,
+            labelStyle: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700),
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.3),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30.0),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          child: Text(
+            _selectedItem ?? '',
+            style: const TextStyle(color: Colors.black),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _overlayEntry?.remove();
+    super.dispose();
+  }
+}

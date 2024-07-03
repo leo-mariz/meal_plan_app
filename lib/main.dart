@@ -11,7 +11,7 @@ class NutriAIApp extends StatelessWidget {
     return MaterialApp(
         title: 'Nutri AI',
         theme: ThemeData(
-          primarySwatch: Colors.green,
+          primarySwatch: Colors.blue,
         ),
         initialRoute: '/',
         routes: {

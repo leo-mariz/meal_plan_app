@@ -3,7 +3,6 @@ import 'package:meal_plan_app/src/imports/imports_widgets.dart';
 import 'package:meal_plan_app/src/imports/imports_backend.dart';
 import 'package:http/http.dart' as http;
 
-
 class FormPage extends StatefulWidget {
   const FormPage({super.key});
 
@@ -13,6 +12,8 @@ class FormPage extends StatefulWidget {
 
 class FormPageState extends State<FormPage> {
   int _currentStep = 0;
+
+  // final ScrollController scrollController = ScrollController();
 
   final List<Map<String, List<dynamic>>> _labels = [
     {
@@ -155,7 +156,28 @@ class FormPageState extends State<FormPage> {
     (index) => TextEditingController(),
   );
 
+  void showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Dialog(
+          backgroundColor: Colors.transparent,
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+    );
+  }
+
+  void hideLoadingDialog(BuildContext context) {
+    Navigator.of(context).pop();
+  }
+
   Future<void> _submitForm() async {
+    showLoadingDialog(context);
+
     final Map<String, String> formData = {};
     for (var i = 0; i < _controllers.length; i++) {
       formData[_topics[i]] = _controllers[i].text;
@@ -173,13 +195,14 @@ class FormPageState extends State<FormPage> {
       body: jsonEncode(formData),
     );
 
+    hideLoadingDialog(context);
+
     if (response.statusCode == 201) {
       // Sucesso
       if (!mounted) return;
       Navigator.pushNamed(context, '/home');
     } else {
       // Falha no envio do formulário
-      // ignore: avoid_print
       print('Falha ao enviar formulário');
     }
   }
@@ -198,6 +221,7 @@ class FormPageState extends State<FormPage> {
       if (_currentStep < _labels.length - 1) {
         setState(() {
           _currentStep++;
+          // scrollController.jumpTo(0);
         });
       } else {
         _submitForm();
@@ -216,6 +240,7 @@ class FormPageState extends State<FormPage> {
     if (_currentStep > 0) {
       setState(() {
         _currentStep--;
+        // scrollController.jumpTo(0);
       });
     }
   }
@@ -235,16 +260,20 @@ class FormPageState extends State<FormPage> {
           child: Column(
             children: [
               AppBar(
-                title: const Text('Questionário Inicial'),
+                title: const Text('Questionário Inicial',
+                    style: TextStyle(color: Colors.white)),
                 backgroundColor: Colors.transparent,
                 elevation: 0,
               ),
               Expanded(
+                // child: SingleChildScrollView(
+                // controller: scrollController,
                 child: MultipleChoiceForm(
                   controllers: currentControllers,
                   labels: _labels[_currentStep],
                   buttonText: 'Próximo',
                   onButtonPressed: _nextStep,
+                  // ),
                 ),
               ),
               Row(
@@ -269,6 +298,7 @@ class FormPageState extends State<FormPage> {
     for (var controller in _controllers) {
       controller.dispose();
     }
+    // _scrollController.dispose();
     super.dispose();
   }
 }
