@@ -1,16 +1,6 @@
 # meal_plan_app
 
-A new Flutter project.
+=======
+Generate your personalized meal_plan with AI.
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+> > > > > > > 125d90e26e81addb5572e9c5307c5f3bf221bfcb
