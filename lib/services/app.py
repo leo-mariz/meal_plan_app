@@ -27,28 +27,28 @@ client = OpenAI()
 def contem_numero(s):
     return bool(re.search(r'\d', s))
 
-def generate_prompt(infos):
+def generate_prompt(user_info):
     prompt = f"""
     Você é um assistente de inteligência artificial e vai criar um plano alimentar personalizado para um usuário com base nas informações abaixo:
 
-    - Peso: {infos['peso']} kg
-    - Altura: {infos['altura']} cm
-    - Idade: {infos['idade']} anos
-    - Sexo: {infos['sexo']}
-    - Exercícios: {infos['exercicios']}
-    - Frequência: {infos['frequencia_exercicios']} dias/semana
-    - Duração: {infos['duracao_exercicios']} min/dia
-    - Biotipo: {infos['biotipo']}
-    - Meta: {infos['meta']}
-    - Condições de saúde: {infos['condicoes']}
-    - Dieta atual: {infos['dieta']}
-    - Frequência de legumes: {infos['frequencia_legumes']} dias/semana
-    - Frequência de frutas: {infos['frequencia_frutas']} dias/semana
-    - Frequência de verduras: {infos['frequencia_verduras']} dias/semana
-    - Frequência de carnes: {infos['frequencia_carnes']} dias/semana
-    - Alimentos excluídos: {infos['alimentos_excluidos']}
-    - Suplementos: {infos['suplementos']}
-    - Uso de suplementos: {infos['uso_suplementos']}
+    - Peso: {user_info.peso} kg
+    - Altura: {user_info.altura} cm
+    - Idade: {user_info.idade} anos
+    - Sexo: {user_info.sexo}
+    - Exercícios: {user_info.exercicios}
+    - Frequência: {user_info.frequencia_exercicios} dias/semana
+    - Duração: {user_info.duracao_exercicios} min/dia
+    - Biotipo: {user_info.biotipo}
+    - Meta: {user_info.meta}
+    - Condições de saúde: {user_info.condicoes}
+    - Dieta atual: {user_info.dieta}
+    - Frequência de legumes: {user_info.frequencia_legumes} dias/semana
+    - Frequência de frutas: {user_info.frequencia_frutas} dias/semana
+    - Frequência de verduras: {user_info.frequencia_verduras} dias/semana
+    - Frequência de carnes: {user_info.frequencia_carnes} dias/semana
+    - Alimentos excluídos: {user_info.alimentos_excluidos}
+    - Suplementos: {user_info.suplementos}
+    - Uso de suplementos: {user_info.uso_suplementos}
 
     Crie um plano alimentar diário detalhado e personalizado de acordo com as informações acima incluindo:
     1. Kcal, proteínas, carboidratos e gorduras por dia.
@@ -56,7 +56,7 @@ def generate_prompt(infos):
     3. Preferências, restrições e objetivos.
     4. Sugestões de suplementação.
 
-    Formato da resposta:
+    Formato da resposta (Não altere o formato de maneira alguma):
     **Necessidades diárias:**
         - Calorias totais por dia: kcal
         - Proteínas totais por dia: g
@@ -132,6 +132,14 @@ def extract_meal_details(text):
         meals[meal_name] = foods
 
     return meals
+
+def get_formatted_meal_plan(meal_plan):
+    formatted_meal_plan = {}
+
+    for idx, (meal, details) in enumerate(meal_plan.items()):
+            formatted_meal_plan[idx] = {meal:'\n'.join([food.strip() for food in details])}
+
+    return formatted_meal_plan
 
 def init_db():
     with app.app_context():
@@ -230,62 +238,62 @@ def submit_form():
     if not user:
         return jsonify({'message': 'Usuário não encontrado'}), 404
 
-    try:
-
-        user_info = UserInfo(
-            user_id=user.id,
-            peso=data.get('peso'),
-            altura=data.get('altura'),
-            idade=data.get('idade'),
-            sexo=data.get('sexo'),
-            exercicios=data.get('exercicios'),
-            frequencia_exercicios=data.get('frequencia_exercicios'),
-            duracao_exercicios=data.get('duracao_exercicios'),
-            biotipo=data.get('biotipo'),
-            meta=data.get('meta'),
-            condicoes=data.get('condicoes'),
-            dieta=data.get('dieta'),
-            frequencia_legumes=data.get('frequencia_legumes'),
-            frequencia_frutas=data.get('frequencia_frutas'),
-            frequencia_verduras=data.get('frequencia_verduras'),
-            frequencia_carnes=data.get('frequencia_carnes'),
-            alimentos_excluidos=data.get('alimentos_excluidos'),
-            suplementos=data.get('suplementos'),
-            uso_suplementos=data.get('uso_suplementos'),
-        )
-
-        print(user_info)
-        db.session.add(user_info)
-        user.form_completed = True
-
-        meal_plan_text, usage_tokens, prompt_tokens = generate_meal_plan(data)
-        daily_needs_data = extract_daily_needs(meal_plan_text)
-        meal_details = extract_meal_details(meal_plan_text)
-
-        if daily_needs_data:
-            daily_needs = DailyNeeds(
-                user_id=user.id,
-                calorias=daily_needs_data['calorias'],
-                proteinas=daily_needs_data['proteinas'],
-                carboidratos=daily_needs_data['carboidratos'],
-                gorduras=daily_needs_data['gorduras'],
-                refeicoes=daily_needs_data['refeicoes']
-            )
-            db.session.add(daily_needs)
-
-        meal_plan = MealPlan(
-            user_id=user.id,
-            meal_plan=json.dumps(meal_details, ensure_ascii=False),
-        )
-
-        db.session.add(meal_plan)
-
-        db.session.commit()
-
-        return jsonify({'message': 'Formulário enviado com sucesso'}), 201
     
-    except:
-        return jsonify({'message': 'Erro ao enviar formulário'}), 500
+
+    user_info = UserInfo(
+        user_id=user.id,
+        peso=data.get('peso'),
+        altura=data.get('altura'),
+        idade=data.get('idade'),
+        sexo=data.get('sexo'),
+        exercicios=data.get('exercicios'),
+        frequencia_exercicios=data.get('frequencia_exercicios'),
+        duracao_exercicios=data.get('duracao_exercicios'),
+        biotipo=data.get('biotipo'),
+        meta=data.get('meta'),
+        condicoes=data.get('condicoes'),
+        dieta=data.get('dieta'),
+        frequencia_legumes=data.get('frequencia_legumes'),
+        frequencia_frutas=data.get('frequencia_frutas'),
+        frequencia_verduras=data.get('frequencia_verduras'),
+        frequencia_carnes=data.get('frequencia_carnes'),
+        alimentos_excluidos=data.get('alimentos_excluidos'),
+        suplementos=data.get('suplementos'),
+        uso_suplementos=data.get('uso_suplementos'),
+    )
+
+    print(user_info)
+    db.session.add(user_info)
+    user.form_completed = True
+
+    meal_plan_text, usage_tokens, prompt_tokens = generate_meal_plan(user_info)
+    print(meal_plan_text)
+    daily_needs_data = extract_daily_needs(meal_plan_text)
+    print(daily_needs_data)
+    meal_details = extract_meal_details(meal_plan_text)
+    print(meal_details)
+
+    daily_needs = DailyNeeds(
+        user_id=user.id,
+        calorias=daily_needs_data['calorias'],
+        proteinas=daily_needs_data['proteinas'],
+        carboidratos=daily_needs_data['carboidratos'],
+        gorduras=daily_needs_data['gorduras'],
+        refeicoes=daily_needs_data['refeicoes']
+    )
+    db.session.add(daily_needs)
+
+    meal_plan = MealPlan(
+        user_id=user.id,
+        meal_plan=json.dumps(meal_details, ensure_ascii=False),
+    )
+
+    db.session.add(meal_plan)
+
+    db.session.commit()
+
+    return jsonify({'message': 'Formulário enviado com sucesso'}), 201
+
 
 @app.route('/user_info', methods=['GET'])
 @jwt_required()
@@ -302,6 +310,9 @@ def user_info():
     daily_needs = DailyNeeds.query.filter_by(user_id=user.id).first()
     meal_plan = MealPlan.query.filter_by(user_id=user.id).first()
 
+    meal_plan_data = json.loads(meal_plan.meal_plan) if meal_plan else None
+    formatted_meal_plan = get_formatted_meal_plan(meal_plan_data)
+
     return jsonify({
         'peso': user_info.peso,
         'altura': user_info.altura,
@@ -315,8 +326,8 @@ def user_info():
             'carboidratos': daily_needs.carboidratos,
             'gorduras': daily_needs.gorduras,
             'refeicoes': daily_needs.refeicoes,
-        } if daily_needs else None,
-        'meal_plan': json.loads(meal_plan.meal_plan) if meal_plan else None,
+        } ,
+        'meal_plan': formatted_meal_plan
     }), 200
 
 

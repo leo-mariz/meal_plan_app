@@ -22,6 +22,7 @@ class _HomePageState extends State<HomePage> {
   String refeicoes = '0';
   bool formCompleted = false;
   bool loading = true;
+  List<Map<String, String>> mealPlan = [];
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _HomePageState extends State<HomePage> {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+      print(data);
       setState(() {
         peso = data['peso'].toString();
         altura = data['altura'].toString();
@@ -55,12 +57,19 @@ class _HomePageState extends State<HomePage> {
         hidratacao = data['hidratacao'].toString();
         formCompleted = true;
         loading = false;
+        Map<String, dynamic> mealPlanData = Map<String, dynamic>.from(data['meal_plan']);
+        mealPlan = mealPlanData.entries
+            .map((entry) => Map<String, String>.from(entry.value))
+            .toList();
       });
-    } else {
+    } else if (response.statusCode == 404) {
       setState(() {
         formCompleted = false;
         loading = false;
       });
+    } else {
+      formCompleted = true;
+      print('Erro');
     }
   }
 
@@ -68,7 +77,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Diary'),
+        title: const Text('Home'),
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today),
@@ -142,23 +151,27 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const MealCard(
-                          mealType: 'Breakfast',
-                          description: 'Bread, Peanut butter, Apple',
-                        ),
+                        ...mealPlan.map((meal) {
+                          return MealCard(
+                            mealType: meal.keys.first,
+                            description: meal.values.first.split('\n'),
+                          );
+                        }),
                       ],
                     ),
                   ),
                 )
-              : IntermediateMessage(
-                  message: 'Você ainda não preencheu suas informações',
+              : CustomMessageDialog(
+                  title: 'Informações incompletas',
+                  message: 'Preencha suas informações para continuar',
+                  buttonText: 'Preencher',
                   onButtonPressed: () {
                     Navigator.pushNamed(context, '/forms');
                   },
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Ação ao clicar no botão flutuante
+          _fetchUserInfo();
         },
         child: const Icon(Icons.add),
       ),
