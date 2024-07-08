@@ -57,7 +57,8 @@ class _HomePageState extends State<HomePage> {
         hidratacao = data['hidratacao'].toString();
         formCompleted = true;
         loading = false;
-        Map<String, dynamic> mealPlanData = Map<String, dynamic>.from(data['meal_plan']);
+        Map<String, dynamic> mealPlanData =
+            Map<String, dynamic>.from(data['meal_plan']);
         mealPlan = mealPlanData.entries
             .map((entry) => Map<String, String>.from(entry.value))
             .toList();
@@ -73,17 +74,88 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('jwt');
+    // Navegar para a página de login
+    Navigator.pushReplacementNamed(context, '/');
+  }
+
+  Future<void> _editMeal(int mealIndex) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('jwt');
+
+    print(mealIndex);
+
+    // Aqui você pode querer passar outras informações, como as informações do usuário e da refeição atual.
+    final response = await http.post(
+      Uri.parse('$baseUrl/edit_meal'),
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'mealIndex': mealIndex}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        final updatedMeal = Map<String, String>.from(data['updatedMeal']);
+        mealPlan[mealIndex] = updatedMeal;
+      });
+    } else {
+      print('Failed to edit meal');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: () {},
-          ),
-        ],
+        title: const Text('My Diary'),
+        leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
+          },
+        ),
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            const SizedBox(
+              height: 100,
+              child: DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                ),
+                child: Text(
+                  'Menu',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_circle),
+              title: const Text('Perfil'),
+              onTap: () {
+                // Ação para navegar para o perfil
+              },
+            ),
+            ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: _logout),
+          ],
+        ),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -155,6 +227,9 @@ class _HomePageState extends State<HomePage> {
                           return MealCard(
                             mealType: meal.keys.first,
                             description: meal.values.first.split('\n'),
+                            onEdit: () {
+                              _editMeal(mealPlan.indexOf(meal));
+                            },
                           );
                         }),
                       ],
@@ -169,13 +244,6 @@ class _HomePageState extends State<HomePage> {
                     Navigator.pushNamed(context, '/forms');
                   },
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _fetchUserInfo();
-        },
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }

@@ -24,10 +24,7 @@ client = OpenAI()
 
 
 # FUNÇÕES AUXILIARES
-def contem_numero(s):
-    return bool(re.search(r'\d', s))
-
-def generate_prompt(user_info):
+def generate_plan_prompt(user_info):
     prompt = f"""
     Você é um assistente de inteligência artificial e vai criar um plano alimentar personalizado para um usuário com base nas informações abaixo:
 
@@ -82,8 +79,56 @@ def generate_prompt(user_info):
     """
     return prompt
 
+
+def generate_meal_prompt(meal, user_info):
+    meal_name = list(meal.keys())[0]
+    meal_details = meal[meal_name]
+    formatted_meal_detail = ''
+    for comida in meal_details:
+        formatted_meal_detail += f'{str(comida)}\n\t'
+    prompt = f"""
+    Você é um assistente de inteligência artificial responsável por plano alimentar e vai substituir os alimentos da refeição abaixo, de forma que haja a mesma quantidade de kcal e macronutriente, mantendo as preferencias e objetivos do nosso usuario, também abaixo:
+
+    - Peso: {user_info.peso} kg
+    - Altura: {user_info.altura} cm
+    - Idade: {user_info.idade} anos
+    - Sexo: {user_info.sexo}
+    - Exercícios: {user_info.exercicios}
+    - Frequência: {user_info.frequencia_exercicios} dias/semana
+    - Duração: {user_info.duracao_exercicios} min/dia
+    - Biotipo: {user_info.biotipo}
+    - Meta: {user_info.meta}
+    - Condições de saúde: {user_info.condicoes}
+    - Dieta atual: {user_info.dieta}
+    - Frequência de legumes: {user_info.frequencia_legumes} dias/semana
+    - Frequência de frutas: {user_info.frequencia_frutas} dias/semana
+    - Frequência de verduras: {user_info.frequencia_verduras} dias/semana
+    - Frequência de carnes: {user_info.frequencia_carnes} dias/semana
+    - Alimentos excluídos: {user_info.alimentos_excluidos}
+    - Suplementos: {user_info.suplementos}
+    - Uso de suplementos: {user_info.uso_suplementos}
+
+    **Alimentos a serem substituidos na nossa refeição:**
+    - {meal_name}
+    {formatted_meal_detail}
+
+    Substitua os alimentos acima, criando um novo  para nossa refeição lembrando de:
+    1. Especificar as Kcal, proteínas, carboidratos e gorduras de cada alimento da nossa refeição.
+    2. Manter as preferências, restrições e objetivos do usuário.
+    3. Na sua resposta, sempre envie o q quantidade de kcal, proteinas,... antes da respectiva unidade. 
+        Ex: 100g de frango. 200 Kcal. 20g Proteínas. 10g Carboidratos. 5g Gorduras.
+
+    Formato da resposta (Não altere o formato de maneira alguma):
+    - Nome da refeição:
+        - Quantidade. Alimento 1 ou suplemento 1. Kcal 1. Proteínas 1. Carboidratos 1. Gorduras 1.
+        - Quantidade. Alimento 2 ou suplemento 2. Kcal 2. Proteínas 2. Carboidratos 2. Gorduras 2.
+        - Quantidade. Alimento n ou suplemento n. Kcal n. Proteínas n. Carboidratos n. Gorduras n.
+    """
+    return prompt
+
+
 def generate_meal_plan(infos):
-    prompt = generate_prompt(infos)
+    prompt = generate_plan_prompt(infos)
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -97,6 +142,24 @@ def generate_meal_plan(infos):
     usage_tokens = completion.usage.completion_tokens
     prompt_tokens = completion.usage.prompt_tokens
     return meal_plan, usage_tokens, prompt_tokens
+
+
+def generate_meal(meal, infos):
+    prompt = generate_meal_prompt(meal, infos)
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "Você é uma AI especializada em nutrição e será responsável por montar um plano alimentar personalizado para o nosso usuário, de acordo com as informações pessoais que ele nos enviou."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=1500
+    )
+
+    meal_plan = completion.choices[0].message.content
+    usage_tokens = completion.usage.completion_tokens
+    prompt_tokens = completion.usage.prompt_tokens
+    return meal_plan, usage_tokens, prompt_tokens
+
 
 def extract_daily_needs(text):
     pattern = re.compile(
@@ -118,6 +181,7 @@ def extract_daily_needs(text):
         }
     return None
 
+
 def extract_meal_details(text):
     # Padrão para capturar todas as refeições e seus detalhes
     meal_pattern = re.compile(
@@ -133,13 +197,16 @@ def extract_meal_details(text):
 
     return meals
 
+
 def get_formatted_meal_plan(meal_plan):
     formatted_meal_plan = {}
 
     for idx, (meal, details) in enumerate(meal_plan.items()):
-            formatted_meal_plan[idx] = {meal:'\n'.join([food.strip() for food in details])}
+        formatted_meal_plan[idx] = {meal: '\n'.join(
+            [food.strip() for food in details])}
 
     return formatted_meal_plan
+
 
 def init_db():
     with app.app_context():
@@ -155,6 +222,7 @@ class User(db.Model):
     form_completed = db.Column(db.Boolean, default=False, nullable=False)
     meal_plans = db.relationship('MealPlan', backref='user', lazy=True)
     daily_needs = db.relationship('DailyNeeds', backref='user', uselist=False)
+
 
 class UserInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -178,6 +246,7 @@ class UserInfo(db.Model):
     suplementos = db.Column(db.String(255))
     uso_suplementos = db.Column(db.String(255))
 
+
 class DailyNeeds(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -186,6 +255,7 @@ class DailyNeeds(db.Model):
     carboidratos = db.Column(db.Integer, nullable=False)
     gorduras = db.Column(db.Integer, nullable=False)
     refeicoes = db.Column(db.Integer, nullable=False)
+
 
 class MealPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -238,8 +308,6 @@ def submit_form():
     if not user:
         return jsonify({'message': 'Usuário não encontrado'}), 404
 
-    
-
     user_info = UserInfo(
         user_id=user.id,
         peso=data.get('peso'),
@@ -267,11 +335,8 @@ def submit_form():
     user.form_completed = True
 
     meal_plan_text, usage_tokens, prompt_tokens = generate_meal_plan(user_info)
-    print(meal_plan_text)
     daily_needs_data = extract_daily_needs(meal_plan_text)
-    print(daily_needs_data)
     meal_details = extract_meal_details(meal_plan_text)
-    print(meal_details)
 
     daily_needs = DailyNeeds(
         user_id=user.id,
@@ -326,9 +391,39 @@ def user_info():
             'carboidratos': daily_needs.carboidratos,
             'gorduras': daily_needs.gorduras,
             'refeicoes': daily_needs.refeicoes,
-        } ,
+        },
         'meal_plan': formatted_meal_plan
     }), 200
+
+
+@app.route('/edit_meal', methods=['POST'])
+@jwt_required()
+def edit_meal():
+    user_email = get_jwt_identity()['email']
+    data = request.get_json()
+    meal_index = data['mealIndex']
+
+    user = User.query.filter_by(email=user_email).first()
+    user_info = UserInfo.query.filter_by(user_id=user.id).first()
+    meal_plan = MealPlan.query.filter_by(user_id=user.id).first()
+
+    if not user_info or not meal_plan:
+        return jsonify({"error": "User information or meal plan not found"}), 404
+
+    meal_plan_data = json.loads(meal_plan.meal_plan)
+    meal_name = list(meal_plan_data.keys())[meal_index]
+    meal_dic = {meal_name: meal_plan_data[meal_name]}
+
+    meal_text, usage_tokens, prompt_tokens = generate_meal(
+        meal_dic, user_info)
+
+    updated_meal_details = meal_text.split('\n')[1:]
+    updated_meal_details = [detail.strip() for detail in updated_meal_details]
+    meal_plan_data[meal_name] = updated_meal_details
+    meal_plan.meal_plan = json.dumps(meal_plan_data, ensure_ascii=False)
+    db.session.commit()
+
+    return jsonify({'updatedMeal': {meal_name: "\n".join(updated_meal_details)}}), 200
 
 
 # MAIN

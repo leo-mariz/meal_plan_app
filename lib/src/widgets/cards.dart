@@ -71,33 +71,43 @@ class CalorieProgress extends StatelessWidget {
 class MealCard extends StatelessWidget {
   final String mealType;
   final List<String> description;
+  final Function onEdit;
 
   const MealCard({
     super.key,
     required this.mealType,
     required this.description,
+    required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              mealType,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+        child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                mealType,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            ...description.map((line) => Text(line)),
-          ],
-        ),
+              IconButton(
+                  icon: const Icon(Icons.edit),
+                  iconSize: 16,
+                  onPressed: () => onEdit())
+            ],
+          ),
+          ...description.map((line) => Text(line)),
+        ],
       ),
-    );
+    ));
   }
 }
 
@@ -149,5 +159,3 @@ class WaterIntakeCard extends StatelessWidget {
     );
   }
 }
-
-
