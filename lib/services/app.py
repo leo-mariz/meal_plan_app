@@ -7,6 +7,7 @@ import re
 from openai import OpenAI
 from dotenv import load_dotenv
 import json
+import os
 
 app = Flask(__name__)
 
@@ -20,7 +21,7 @@ jwt = JWTManager(app)
 CORS(app)
 
 load_dotenv()
-client = OpenAI()
+client = OpenAI(api_key = OPENAI_API_KEY)
 
 
 # FUNÇÕES AUXILIARES
@@ -220,6 +221,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     form_completed = db.Column(db.Boolean, default=False, nullable=False)
+    edit_count = db.Column(db.Integer, default=0)
     meal_plans = db.relationship('MealPlan', backref='user', lazy=True)
     daily_needs = db.relationship('DailyNeeds', backref='user', uselist=False)
 
@@ -392,7 +394,8 @@ def user_info():
             'gorduras': daily_needs.gorduras,
             'refeicoes': daily_needs.refeicoes,
         },
-        'meal_plan': formatted_meal_plan
+        'meal_plan': formatted_meal_plan,
+        'editCount': user.edit_count
     }), 200
 
 
@@ -409,6 +412,9 @@ def edit_meal():
 
     if not user_info or not meal_plan:
         return jsonify({"error": "User information or meal plan not found"}), 404
+    
+    if user.edit_count >= 3:
+        return jsonify({"error": "Edit limit reached"}), 403
 
     meal_plan_data = json.loads(meal_plan.meal_plan)
     meal_name = list(meal_plan_data.keys())[meal_index]
@@ -421,9 +427,10 @@ def edit_meal():
     updated_meal_details = [detail.strip() for detail in updated_meal_details]
     meal_plan_data[meal_name] = updated_meal_details
     meal_plan.meal_plan = json.dumps(meal_plan_data, ensure_ascii=False)
+    user.edit_count += 1 
     db.session.commit()
 
-    return jsonify({'updatedMeal': {meal_name: "\n".join(updated_meal_details)}}), 200
+    return jsonify({'updatedMeal': {meal_name: "\n".join(updated_meal_details)}, 'editCount': user.edit_count}), 200
 
 
 # MAIN
