@@ -23,6 +23,8 @@ class _HomePageState extends State<HomePage> {
   bool formCompleted = false;
   bool loading = true;
   List<Map<String, String>> mealPlan = [];
+  int editCount = 0;
+  bool showMessageDialog = false;
 
   @override
   void initState() {
@@ -55,6 +57,7 @@ class _HomePageState extends State<HomePage> {
         gorduras = data['daily_needs']['gorduras'].toString();
         refeicoes = data['daily_needs']['refeicoes'].toString();
         hidratacao = data['hidratacao'].toString();
+        editCount = data['editCount'];
         formCompleted = true;
         loading = false;
         Map<String, dynamic> mealPlanData =
@@ -102,10 +105,14 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         final updatedMeal = Map<String, String>.from(data['updatedMeal']);
         mealPlan[mealIndex] = updatedMeal;
+        editCount = data['editCount'];
       });
-    } else {
-      print('Failed to edit meal');
-    }
+    } 
+    if (response.statusCode == 403) {
+    setState(() {
+      showMessageDialog = true;
+    });}
+    print('Failed to edit meal');
   }
 
   @override
@@ -157,93 +164,122 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : formCompleted
-              ? SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const HomePageTitles(title: 'Daily Targets'),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            CalorieCard(
-                              title: 'Carbs',
-                              value: carboidratos,
-                              unit: 'kcal',
-                              color: Colors.red,
+      body: Stack(
+        children: [
+          loading
+              ? const Center(child: CircularProgressIndicator())
+              : formCompleted
+                  ? SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const HomePageTitles(title: 'Daily Targets'),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                CalorieCard(
+                                  title: 'Carbs',
+                                  value: carboidratos,
+                                  unit: 'kcal',
+                                  color: Colors.red,
+                                ),
+                                CalorieCard(
+                                  title: 'Protein',
+                                  value: proteinas,
+                                  unit: 'g',
+                                  color: Colors.green,
+                                ),
+                                CalorieCard(
+                                  title: 'Fat',
+                                  value: gorduras,
+                                  unit: 'g',
+                                  color: const Color.fromARGB(251, 161, 147, 13),
+                                ),
+                                CalorieCard(
+                                  title: 'Total',
+                                  value: calorias,
+                                  unit: 'Kcal',
+                                  color: Colors.blue,
+                                ),
+                              ],
                             ),
-                            CalorieCard(
-                              title: 'Protein',
-                              value: proteinas,
-                              unit: 'g',
-                              color: Colors.green,
+                            const SizedBox(height: 20),
+                            WaterIntakeCard(
+                              intake: '$hidratacao ml',
                             ),
-                            CalorieCard(
-                              title: 'Fat',
-                              value: gorduras,
-                              unit: 'g',
-                              color: const Color.fromARGB(251, 161, 147, 13),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Body measurement',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            CalorieCard(
-                              title: 'Total',
-                              value: calorias,
-                              unit: 'Kcal',
-                              color: Colors.blue,
+                            BodyMeasurementCard(
+                              weightValue: '$peso kg',
+                              height: '$altura cm',
+                              bmi: '$imc BMI',
                             ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Next meal',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Generate new meal: $editCount/3',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            ...mealPlan.map((meal) {
+                              return MealCard(
+                                mealType: meal.keys.first,
+                                description: meal.values.first.split('\n'),
+                                onEdit: () {
+                                  if (editCount < 3) {
+                                    _editMeal(mealPlan.indexOf(meal));
+                                  } else {
+                                    setState(() {
+                                      showMessageDialog = true;
+                                    });
+                                  }
+                                },
+                              );
+                            }).toList(),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        WaterIntakeCard(
-                          intake: '$hidratacao ml',
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Body measurement',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        BodyMeasurementCard(
-                          weightValue: '$peso kg',
-                          height: '$altura cm',
-                          bmi: '$imc BMI',
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Next meal',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        ...mealPlan.map((meal) {
-                          return MealCard(
-                            mealType: meal.keys.first,
-                            description: meal.values.first.split('\n'),
-                            onEdit: () {
-                              _editMeal(mealPlan.indexOf(meal));
-                            },
-                          );
-                        }),
-                      ],
+                      ),
+                    )
+                  : CustomMessageDialog(
+                      title: 'Informações incompletas',
+                      message: 'Preencha suas informações para continuar',
+                      buttonText: 'Preencher',
+                      onButtonPressed: () {
+                        Navigator.pushNamed(context, '/forms');
+                      },
                     ),
-                  ),
-                )
-              : CustomMessageDialog(
-                  title: 'Informações incompletas',
-                  message: 'Preencha suas informações para continuar',
-                  buttonText: 'Preencher',
-                  onButtonPressed: () {
-                    Navigator.pushNamed(context, '/forms');
-                  },
-                ),
-    );
+          if (showMessageDialog)
+            CustomMessageDialog(
+              title: 'Limite de Edições Alcançado',
+              message: 'Você atingiu o limite de 3 edições permitidas.',
+              buttonText: 'Fechar',
+              onButtonPressed: () {
+                setState(() {
+                  showMessageDialog = false;
+                });
+              },
+            ),
+        ]),
+       );
   }
 }
+
+      
