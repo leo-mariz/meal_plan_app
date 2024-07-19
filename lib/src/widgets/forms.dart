@@ -46,6 +46,10 @@ class CustomForm extends StatelessWidget {
                     !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
                   return 'Por favor, insira um email válido';
                 }
+                if (labels[i] == 'Senha' &&
+                    !RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$').hasMatch(value)) {
+                  return 'A senha deve conter pelo menos uma letra maiúscula, uma letra minúscula, um caractere especial e um número';
+                }
                 return null;
               },
             ),
