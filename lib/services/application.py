@@ -3,24 +3,30 @@ from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_cors import CORS
-import re
 from openai import OpenAI
 from dotenv import load_dotenv
 import json
+import re
 import os
+
+load_dotenv()
+SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
+SECRET_KEY = os.getenv("SECRET_KEY")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///meuapp.db'
-app.config['SECRET_KEY'] = 'uma_chave_secreta_bem_segura'
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 CORS(app)
 
-load_dotenv()
 client = OpenAI(api_key = OPENAI_API_KEY)
 
 
@@ -119,8 +125,8 @@ def generate_meal_prompt(meal, user_info):
     3. Na sua resposta, sempre envie o q quantidade de kcal, proteinas,... antes da respectiva unidade. 
         Ex: 100g de frango. 200 Kcal. 20g Proteínas. 10g Carboidratos. 5g Gorduras.
 
-    Formato da resposta (Não altere o formato de maneira alguma):
-    - Nome da refeição:
+    Formato da resposta (Não altere o formato de maneira alguma, não adicione contexto nem informações extras, somente a resposta do formato abaixo, bem objetivamente):
+    - {meal_name}:
         - Quantidade. Alimento 1 ou suplemento 1. Kcal 1. Proteínas 1. Carboidratos 1. Gorduras 1.
         - Quantidade. Alimento 2 ou suplemento 2. Kcal 2. Proteínas 2. Carboidratos 2. Gorduras 2.
         - Quantidade. Alimento n ou suplemento n. Kcal n. Proteínas n. Carboidratos n. Gorduras n.
@@ -209,6 +215,14 @@ def get_formatted_meal_plan(meal_plan):
     return formatted_meal_plan
 
 
+def is_password_valid(password):
+    # Define the regex pattern
+    pattern = re.compile(
+        r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
+    )
+    return bool(pattern.match(password))
+
+
 def init_db():
     with app.app_context():
         db.create_all()
@@ -228,7 +242,7 @@ class User(db.Model):
 
 class UserInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
     peso = db.Column(db.Float)
     altura = db.Column(db.Integer)
     idade = db.Column(db.Integer)
@@ -273,6 +287,10 @@ def register():
     existing_user = User.query.filter_by(email=data['email']).first()
     if existing_user:
         return jsonify({'message': 'Email já cadastrado'}), 400
+    
+    password = data.get('password')
+    if not is_password_valid(password):
+        return jsonify({"message": "A senha deve ter pelo menos: uma letra maiuscula, uma letra minúscula, um número e um caractere especial"}), 400
 
     hashed_password = bcrypt.generate_password_hash(
         data['password']).decode('utf-8')
@@ -309,6 +327,9 @@ def submit_form():
 
     if not user:
         return jsonify({'message': 'Usuário não encontrado'}), 404
+    
+    if user.form_completed:
+        return jsonify({'message': 'Formulário já foi enviado'}), 400
 
     user_info = UserInfo(
         user_id=user.id,

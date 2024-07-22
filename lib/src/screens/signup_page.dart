@@ -59,7 +59,7 @@ class SignUpPageState extends State<SignUpPage> {
           );
         },
       );
-    } else if (response.statusCode == 400) {
+    } else if (response.statusCode == 400 || response.statusCode == 400) {
       setState(() {
         _errorMessage = jsonDecode(response.body)['message'];
       });

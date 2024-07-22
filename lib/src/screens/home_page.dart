@@ -151,13 +151,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.account_circle),
-              title: const Text('Perfil'),
-              onTap: () {
-                // Ação para navegar para o perfil
-              },
-            ),
-            ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text('Logout'),
                 onTap: _logout),
