@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:meal_plan_app/src/imports/imports_widgets.dart';
 import 'package:meal_plan_app/src/imports/imports_backend.dart';
 import 'package:http/http.dart' as http;
 
 class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
+
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
@@ -77,7 +78,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Editar Perfil'),
+        title: const Text('Editar Perfil'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -85,24 +86,24 @@ class _ProfilePageState extends State<ProfilePage> {
           children: <Widget>[
             TextField(
               controller: pesoController,
-              decoration: InputDecoration(labelText: 'Peso'),
+              decoration: const InputDecoration(labelText: 'Peso'),
             ),
             TextField(
               controller: alturaController,
-              decoration: InputDecoration(labelText: 'Altura'),
+              decoration: const InputDecoration(labelText: 'Altura'),
             ),
             TextField(
               controller: idadeController,
-              decoration: InputDecoration(labelText: 'Idade'),
+              decoration: const InputDecoration(labelText: 'Idade'),
             ),
             TextField(
               controller: sexoController,
-              decoration: InputDecoration(labelText: 'Sexo'),
+              decoration: const InputDecoration(labelText: 'Sexo'),
             ),
             // Adicione todos os campos necessários
             ElevatedButton(
               onPressed: _saveUserInfo,
-              child: Text('Salvar'),
+              child: const Text('Salvar'),
             ),
           ],
         ),
