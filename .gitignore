@@ -23,6 +23,10 @@ migrate_working_dir/
 .env
 Venv/
 testes.txt
+api_mpa.pem
+Terminal Deploy AWS.txt
+Procfile
+instance/
 
 # Flutter/Dart/Pub related
 **/doc/api/
